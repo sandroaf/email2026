@@ -5,8 +5,31 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
+
 //Load Composer's autoloader (created by composer, not included with PHPMailer)
 require 'vendor/autoload.php';
+
+date_default_timezone_set("America/Sao_Paulo");
+$msg = "";
+
+function salvaContato($nomearq, $dados)
+{
+    try {
+        $caminho = dirname(__DIR__) . "/email2026/contatos/";
+        //windows $caminho = dirname(__DIR__)."\\email2026\\contatos\\";
+        $nomearquivo = $caminho . $nomearq;
+        $arq = fopen($nomearquivo, "c+");
+        if ($arq) {
+            $msg = "Arquivo $nomearquivo salvo com " . fwrite($arq, $dados) . " bytes<br>";
+            fclose($arq);
+        } else {
+            throw new Exception("Erro ao salvar arquivo $nomearquivo", 1);
+        }
+    } catch (Exception $e) {
+        echo "Erro! " . $e->getMessage();
+    }
+    return $msg;
+}
 
 //Create an instance; passing `true` enables exceptions
 $mail = new PHPMailer(true);
@@ -22,6 +45,7 @@ try {
     //Usando recurso SMTP da Twilio (SendGrid) 
     // https://www.twilio.com/en-us/products/email-api/smtp-service                              //SMTP password
 
+ 
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
     $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
 
@@ -41,12 +65,19 @@ try {
     $mail->isHTML(true);                                  //Set email format to HTML
     $mail->Subject = 'Contato site DEVs-TI 2026';
     $corpo = "Telefone: " . $_POST["ffone"];
-    $corpo = $corpo . "\n\r" . $_POST["fmsg"];
+    $corpo = $corpo . "\n\rMensagem: " . $_POST["fmsg"];
     $mail->Body    = $corpo;
     $mail->AltBody = $corpo;
 
     $mail->send();
-    $msg = 'Sucesso! Sua mensagem foi enviada';
+    $msg .= "<br>Sucesso! Sua mensagem foi enviada";
+
+    //Salvar contato em arquivo.
+    $dados = "Nome: " . $_POST['fnome'] . "\n\r";
+    $dados .= "e-mail:" . $_POST['femail'] . "\n\r";
+    $dados .= $corpo;
+    $nomearquivo = date("Y-m-d-his") . "-" . $_POST["femail"] . ".txt";
+    $msg .= "<br>" . salvaContato($nomearquivo, $dados);
 } catch (Exception $e) {
     echo "ERRO! Mensagem não foi enviar. Mailer código erro: {$mail->ErrorInfo}";
 }
